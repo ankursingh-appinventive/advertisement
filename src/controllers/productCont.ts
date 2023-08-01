@@ -6,7 +6,7 @@ dotenv.config();
 const SECRET_KEY = process.env.KEY;
 import jwt, { JwtPayload } from "jsonwebtoken";
 
-
+//hello
 async function addProduct (req: Request, res: Response, next: any) {
     // const uid = req.userId
     let id
