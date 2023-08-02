@@ -10,21 +10,11 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 
 //hello
 async function addProduct (req: Request, res: Response, next: any) {
-    // const uid = req.userId
-    let id
-    const token = req.headers.authorization?.split(" ")[1];
-    console.log(token);
-
+    const uid = req.userId
     const {productName, Description, basePrice, address_id, status, category_id} = req.body;
     try{
-        if (!token) {
-            return res.status(401).send("Authorization token not found");
-        }
-        const verifyToken = jwt.verify(token, SECRET_KEY);
-        console.log(verifyToken);
-        id = verifyToken;
         const result = await Product.create({
-            user_id:id.id,
+            user_id:uid,
             productName,
             Description,
             basePrice,
@@ -33,7 +23,6 @@ async function addProduct (req: Request, res: Response, next: any) {
             status,
             category_id
         });
-
         res.status(201).json({user: result});
     }
     catch(error){
@@ -42,101 +31,75 @@ async function addProduct (req: Request, res: Response, next: any) {
      }
 }
 
-async function viewProduct (req: Request, res: Response) {
-    const token = req.headers.authorization?.split(" ")[1];
-    console.log(token);
+async function viewOWNproduct (req: Request, res: Response) {
+    const uid = req.userId
     try {
-        if (!token) {
-            return res.status(401).send("Authorization token not found");
-        }
-        const verifyToken = jwt.verify(token, SECRET_KEY);
-        console.log(verifyToken);
-        const id = verifyToken;
-        const product = await Product.findAll({ where: { id: id } });
-        console.log("products:", product);
+        const product = await Product.findAll({ where: { id: uid }});
         if (!product) {
             return res.status(404).send("No products available");
         } else {
-            res.send(product);
+            res.status(200).send(product);
         }
     } catch (error) {
-        console.log;
-        return res.status(401).send("Invalid token");
+        return res.status(401).json({message:"Invalid token"});
     }
 }
 
 async function getProduct (req: Request, res: Response){
-    const category_id = req.body;
-    const token = req.headers.authorization?.split(" ")[1];
-    console.log(token);
+    const category_id = req.body.categoryID;
     try {
-        if (!token) {
-            return res.status(401).send("Authorization token not found");
-        }
-        const verifyToken = jwt.verify(token, SECRET_KEY);
-        console.log(verifyToken);
-        const id = verifyToken;
-        const user = await User.findOne({ where: { id: id } });
-        // console.log("products:", user);
-        if (!user) {
-            return res.status(404).send("User not found");
-        } else {
             const product = await Product.findAll({ where: { category_id: category_id } });
             if (!product) {
                 return res.status(404).send("No products available");
             } else {
-                res.send(product);
+                res.status(201).send(product);
             }
-        }
+        
     } catch (error) {
-        console.log;
-        return res.status(401).send("Invalid token");
+        return res.status(401).json({message:"Invalid token"});
     }
 }
 
 async function bidProduct (req: Request, res: Response) {
-    const token = req.headers.authorization?.split(" ")[1];
-    console.log(token);
+    const uid = req.userId
+    const { product_id, amount } = req.body;
     try {
-        if (!token) {
-        return res.status(401).send("Authorization token not found");
-        }
-        const verifyToken = jwt.verify(token, SECRET_KEY);
-        console.log(verifyToken);
-        const id = verifyToken;
-        const { product_id, amount } = req.body;
         const product = await Product.findOne({ where: { product_id: product_id } });
         if (!product) {
             return res.status(404).send("Product not found");
         }
-        if(amount > product.bid_price){
+        if(amount > product.bid_price && product.user_id != uid){
             product.bid_price = amount;
-            product.bidder_id = +id;
+            product.bidder_id = uid;
             await product.save();
         }
-
-        res.send("Bidding successfull");
-        } catch (error) {
+        res.status(200).json({message:"Bidding successfull"});
+    } catch (error) {
         console.log(error);
-        return res.status(401).send("Invalid token");
-        }
+        return res.status(401).json({message:"Something went wrong"});
+    }
 }
 
-
 async function deleteProduct (req: Request, res: Response) {
+    const uid = req.userId
     const id =req.params.id;
     try {
-        const product = await Product.findOne({where:{product_id: id}});
+        const product = await Product.findOne({where:{product_id: id, user_id:uid}});
         if(!product){
-            return res.status(404).json({ message: "product not found" });
+            return res.status(404).json({ message: "Product not found" });
         }
-        await Product.destroy({where: {product_id: id}});
-        res.status(200).json({message: "product deleted successfully"});
+        await product.destroy();
+        res.status(200).json({message: "Product deleted successfully"});
     } catch (error) {
             console.log(error);
             res.status(500).json({message: "something went wrong"});   
     }
 }
+
+async function uploadimage (req:Request, res:Response){
+
+}
+
 
 
 export async function addProductImage(req: Request, res: Response) {
@@ -183,9 +146,14 @@ export async function addProductImage(req: Request, res: Response) {
 
 export {
     addProduct,
-    viewProduct,
+    viewOWNproduct,
     bidProduct,
     deleteProduct,
+<<<<<<< Updated upstream
     getProduct
     // addProductImage
+=======
+    getProduct,
+    uploadimage
+>>>>>>> Stashed changes
 }

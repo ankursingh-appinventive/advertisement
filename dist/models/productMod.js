@@ -43,7 +43,7 @@ Product.init({
     status: {
         type: sequelize_1.DataTypes.BOOLEAN,
         defaultValue: true
-    },
+    }
 }, {
     sequelize: config_1.sequelize,
     modelName: 'products'
