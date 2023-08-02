@@ -1,3 +1,5 @@
+// import { findUserByEmail, makeuser } from "../services/userSer";
+import userSer from '../services/userSer'
 import User from "../models/userMod";
 import { Session } from "../models/sessionMod";
 import { Address } from "../models/addressMod";
@@ -12,30 +14,30 @@ dotenv.config();
 const SECRET_KEY = process.env.KEY;
 
 // SIGNUP
-async function signup(req: Request, res: Response) {
-  //console.log(req.body);
-  const { username, email, password, fav, DOB, phone_number, gender } = req.body;
-  try {
-    const exist = await User.findOne({ where: { email } });
-    if (exist) {
-      return res.status(400).json({ message: "user already exist" });
-    }
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await User.create({
-      username,
-      email,
-      password: hashedPassword,
-      fav,
-      DOB,
-      phone_number,
-      gender,
-    });
-    res.status(201).json({ user: result });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "something went wrong" });
-  }
-}
+// async function signup(req: Request, res: Response) {
+//   //console.log(req.body);
+//   const { username, email, password, fav, DOB, phone_number, gender } = req.body;
+//   try {
+//     const exist = await User.findOne({ where: { email } });
+//     if (exist) {
+//       return res.status(400).json({ message: "user already exist" });
+//     }
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     const result = await User.create({
+//       username,
+//       email,
+//       password: hashedPassword,
+//       fav,
+//       DOB,
+//       phone_number,
+//       gender,
+//     });
+//     res.status(201).json({ user: result });
+//   } catch (error) {
+//     console.log(error);
+//     res.status(500).json({ message: "something went wrong" });
+//   }
+// }
 
 // LOGIN
 async function login(req: Request, res: Response) {
@@ -210,8 +212,8 @@ async function uploadProfilePic(req:Request, res:Response){
     return res.status(400).json({ error: "No image uploaded" });
   }
   const imagePath = "./public/uploads/" + req.file.originalname;
-  const profilePic = fs.readFileSync(path.resolve(imagePath));
-  const user:any = await User.findOne({ where: { user_id : uid } });
+  const profilePic = await fs.readFileSync(path.resolve(imagePath));
+  const user:any = await User.findOne({ where: { id : uid } });
   if (!user) {
     return res.status(400).json({ error: "No user Found" });
   }
@@ -241,6 +243,32 @@ async function forgetPassword(req:Request, res:Response){
   }
 }
 
+const signup = async (req, res) => {
+  const { username, email, password, fav, DOB, phone_number, gender } = req.body;
+  try {
+    const exist = await userSer.findUserByEmail(email);
+    if (exist) {
+      return res.status(400).json({ message: "user already exists" });
+    }
+
+    const result = await userSer.makeuser({
+      username,
+      email,
+      password,
+      fav,
+      DOB,
+      phone_number,
+      gender,
+    });
+
+    res.status(201).json({ user: result });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "something went wrong" });
+  }
+};
+
+
 export {
   signup,
   login,
@@ -251,5 +279,5 @@ export {
   logout,
   deleteU,
   uploadProfilePic,
-  forgetPassword
+  forgetPassword,
 };
