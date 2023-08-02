@@ -1,46 +1,43 @@
+// import { findUserByEmail, makeuser } from "../services/userSer";
+import userSer from '../services/userSer'
 import User from "../models/userMod";
 import { Session } from "../models/sessionMod";
 import { Address } from "../models/addressMod";
 import bcrypt from "bcrypt";
-import redisclient from '../redis/redis'
-// import jwt from "jsonwebtoken";
 import dotenv from 'dotenv';
-dotenv.config();
-
-
-
-const SECRET_KEY = process.env.KEY;
 import { Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
+import path from "path";
+import fs from "fs"
+// import redisclient from '../redis/redis'
+dotenv.config();
+const SECRET_KEY = process.env.KEY;
 
 // SIGNUP
-async function signup(req: Request, res: Response) {
-  //console.log(req.body);
-  const { username, email, password, fav, DOB, phone_number, gender } = req.body;
-  try {
-    const exist = await User.findOne({ where: { email } });
-    if (exist) {
-      return res.status(400).json({ message: "user already exist" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const result = await User.create({
-      username,
-      email,
-      password: hashedPassword,
-      fav,
-      DOB,
-      phone_number,
-      gender,
-    });
-
-    res.status(201).json({ user: result });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "something went wrong" });
-  }
-}
+// async function signup(req: Request, res: Response) {
+//   //console.log(req.body);
+//   const { username, email, password, fav, DOB, phone_number, gender } = req.body;
+//   try {
+//     const exist = await User.findOne({ where: { email } });
+//     if (exist) {
+//       return res.status(400).json({ message: "user already exist" });
+//     }
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     const result = await User.create({
+//       username,
+//       email,
+//       password: hashedPassword,
+//       fav,
+//       DOB,
+//       phone_number,
+//       gender,
+//     });
+//     res.status(201).json({ user: result });
+//   } catch (error) {
+//     console.log(error);
+//     res.status(500).json({ message: "something went wrong" });
+//   }
+// }
 
 // LOGIN
 async function login(req: Request, res: Response) {
@@ -54,13 +51,10 @@ async function login(req: Request, res: Response) {
     if (!matchedPassword) {
       return res.status(400).json({ message: "Password not match" });
     }
-    // const token = jwt.sign({ id: exists.id }, SECRET_KEY, {
-    //   expiresIn: "1h",
       const token = jwt.sign({ id: exists.id }, SECRET_KEY, {
         expiresIn: process.env.EXP,
     });
     res.status(201).json({ user: exists, token: token });
-
     const result = await Session.create({
       user_id: exists.id,
       device_id: device_Id,
@@ -75,16 +69,9 @@ async function login(req: Request, res: Response) {
 
 // LOGOUT
 async function logout(req: Request, res: Response) {
-  const token = req.headers.authorization?.split(" ")[1];
-  console.log(token);
-  try {
-    if (!token) {
-      return res.status(401).send("Authorization token not found");
-    }
-    const verifyToken = jwt.verify(token, SECRET_KEY);
-    console.log(verifyToken);
-    const id = verifyToken;
-    const session = Session.findOne({ where: { id: id } })
+  const uid = req.userId
+  try{
+    const session = Session.findOne({ where: { id: uid, status: true } })
     session.status=false
     await session.save();
   } catch (error) {
@@ -98,11 +85,11 @@ async function getProfile(req: Request, res: Response) {
   const uid = req.userId
   try{
     const user = await User.findOne({ where: { id: uid } });
-    console.log("user:", user);
+    // console.log("user:", user);
     if (!user) {
       return res.status(404).send("User not found");
     } else {
-      res.send(user);
+      res.send("user : "+user);
     }
   } catch (error) {
     console.log;
@@ -112,20 +99,13 @@ async function getProfile(req: Request, res: Response) {
 
 //UPDATE
 async function updateProfile(req: Request, res: Response) {
-    const token = req.headers.authorization?.split(" ")[1];
-    console.log(token);
-    try {
-        if (!token) {
-        return res.status(401).send("Authorization token not found");
-        }
-        const verifyToken = jwt.verify(token, SECRET_KEY);
-        console.log(verifyToken);
-        const id = verifyToken;
-        const user = await User.findOne({ where: { id: id } });
+    const uid = req.userId
+    try{
+        const user = await User.findOne({ where: { id: uid } });
         if (!user) {
             return res.status(404).send("User not found");
         }
-        const { username, DOB, PIC, phone_number, fav } = req.body;
+        const { username, DOB, phone_number, fav } = req.body;
         if (username) {
             user.username = username;
         }
@@ -135,60 +115,39 @@ async function updateProfile(req: Request, res: Response) {
         if (phone_number) {
             user.phone_number = phone_number;
         }
-        if (PIC) {
-            const img = req.file.fieldname
-            user.profilePIC = new Blob([img], {type: 'plain/text'});
-        }
         if (fav) {
             user.fav = fav;
         }
         await user.save();
-        res.send("Profile updated successfully");
+          res.send("Profile updated successfully");
         } catch (error) {
-        console.log(error);
-        return res.status(401).send("Invalid token");
+          console.log(error);
+          return res.status(401).send("Invalid token");
         }
-
 }
 
 //DELETE
 async function deleteU(req: Request, res: Response) {
-    const token = req.headers.authorization?.split(" ")[1];
-    console.log(token);
-    try {
-      if (!token) {
-        return res.status(401).send("Authorization token not found");
-      }
-      const verifyToken = jwt.verify(token, SECRET_KEY);
-      console.log(verifyToken);
-      const id = verifyToken;
-      const user = await User.findOne({ where: { id: id } });
+    const uid = req.userId
+    try{
+      const user = await User.findOne({ where: { id: uid } });
       console.log("user:", user);
       if (!user) {
         return res.status(404).send("User not found");
       }
       await user.destroy();
-      res.send("User delete successfully........");
+      res.send("User deleted successfully........");
     } catch (error) {
-      console.log;
       return res.status(401).send("Invalid token");
     } 
   }
 
 // ADDRESS
 async function address(req: Request, res: Response) {
-    let id;
-    const token = req.headers.authorization?.split(" ")[1];
-    console.log(token);
-    try {
-      if (!token) {
-        return res.status(401).send("Authorization token not found");
-      }
-      const verifyToken = jwt.verify(token, SECRET_KEY);
-      console.log(verifyToken);
-      id = verifyToken;
-      const user = await User.findOne({ where: { id: id.id } });
-      console.log("user:", user);
+    const uid = req.userId
+    try{
+      const user = await User.findOne({ where: { id: uid } });
+      // console.log("user:", user);
       if (!user) {
         return res.status(404).send("User not found");
       }
@@ -196,11 +155,10 @@ async function address(req: Request, res: Response) {
         console.log;
         return res.status(401).send("Invalid token");
     } 
-  
-  const {houseNo,street,area,landmark,district,city,state,country,zip,address_type,status} = req.body;
+const {houseNo,street,area,landmark,district,city,state,country,zip,address_type,status} = req.body;
   try {
     const result = await Address.create({
-        user_Id:id.id,
+        user_Id:uid,
         houseNo,
         street,
         area,
@@ -213,7 +171,6 @@ async function address(req: Request, res: Response) {
         address_type,
         status
     });
-
     res.status(201).json({ user: result });
   } catch (error) {
     console.log(error);
@@ -223,21 +180,14 @@ async function address(req: Request, res: Response) {
 
 // UPDATE ADDRESS
 async function updateAddress(req: Request, res: Response) {
-    let address;
-    const token = req.headers.authorization?.split(" ")[1];
-    console.log(token);
-    try {
-      if (!token) {
-        return res.status(401).send("Authorization token not found");
-      }
-      const verifyToken = jwt.verify(token, SECRET_KEY);
-      console.log(verifyToken);
-      const id = verifyToken;
-      address = await Address.findOne({ where: { id: id } });
+    const uid = req.userId
+    const aid = req.body
+    try{
+      const address = await Address.findOne({ where: { id: aid } });
       if (!address) {
         return res.status(404).send("Previous Address not found");
       }
-    const {houseNo,street,area,landmark,district,city,state,country,zip,address_type} = req.body;
+const {houseNo,street,area,landmark,district,city,state,country,zip,address_type} = req.body;
     address.houseNo = houseNo;
     address.street = street;
     address.area = area;
@@ -248,7 +198,6 @@ async function updateAddress(req: Request, res: Response) {
     address.country = country;
     address.zip = zip;
     address.address_type = address_type;
-
     await address.save();
     res.send("Profile updated successfully");
     } catch (error) {
@@ -256,6 +205,69 @@ async function updateAddress(req: Request, res: Response) {
         return res.status(401).send("Invalid token");
     } 
 }
+
+async function uploadProfilePic(req:Request, res:Response){
+  const uid = req.userId
+  if (!req.file) {
+    return res.status(400).json({ error: "No image uploaded" });
+  }
+  const imagePath = "./public/uploads/" + req.file.originalname;
+  const profilePic = await fs.readFileSync(path.resolve(imagePath));
+  const user:any = await User.findOne({ where: { id : uid } });
+  if (!user) {
+    return res.status(400).json({ error: "No user Found" });
+  }
+  user.profilePIC = profilePic
+  await user.save();
+  fs.unlink(path.resolve(imagePath), (err) => {
+    console.log("error in file delete:", err);
+  });
+  return res
+    .status(200)
+    .json({ message: "Product Image updated successfully" });
+}
+
+async function forgetPassword(req:Request, res:Response){
+  const uid = req.userId
+  try {
+    const {fav, newPassword} = req.body
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  const user = await User.findOne({where:{id:uid}})
+  if(user.fav==fav){
+        user.password=hashedPassword
+        user.save();
+        res.status(200).json({message:"Password updated successfully"})
+  }
+  } catch (error) {
+    res.status(500).json({message: "Something went wrong"});
+  }
+}
+
+const signup = async (req, res) => {
+  const { username, email, password, fav, DOB, phone_number, gender } = req.body;
+  try {
+    const exist = await userSer.findUserByEmail(email);
+    if (exist) {
+      return res.status(400).json({ message: "user already exists" });
+    }
+
+    const result = await userSer.makeuser({
+      username,
+      email,
+      password,
+      fav,
+      DOB,
+      phone_number,
+      gender,
+    });
+
+    res.status(201).json({ user: result });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "something went wrong" });
+  }
+};
+
 
 export {
   signup,
@@ -266,4 +278,6 @@ export {
   updateAddress,
   logout,
   deleteU,
+  uploadProfilePic,
+  forgetPassword,
 };
