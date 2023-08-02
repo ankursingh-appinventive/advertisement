@@ -2,6 +2,8 @@ import Product from "../models/productMod";
 import User from "../models/userMod";
 import {Request, Response} from "express";
 import dotenv from 'dotenv';
+import path from "path";
+import fs from "fs";
 dotenv.config();
 const SECRET_KEY = process.env.KEY;
 import jwt, { JwtPayload } from "jsonwebtoken";
@@ -137,10 +139,53 @@ async function deleteProduct (req: Request, res: Response) {
 }
 
 
+export async function addProductImage(req: Request, res: Response) {
+    console.log("part1");
+    const token = req.headers.authorization?.split(" ")[1];
+    console.log(token);
+    if (!token) {
+      return res.status(401).send("Authorization token not found");
+    }
+    const decodedToken = <JwtPayload>jwt.verify(token, "secret");
+    const userId = decodedToken.id;
+
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
+  const product_id = Number(req.params.id);
+  console.log("part2");
+  if (!product_id) {
+    return res.status(400).json({ error: "No Product id found" });
+  }
+
+  const imagePath = "./public/uploads/" + req.file.originalname;
+  console.log("part3");
+  const productPic = fs.readFileSync(path.resolve(imagePath));
+
+  const product:any = await Product.findOne({ where: { user_id : userId , product_id: product_id } });
+
+  if (!product) {
+    return res.status(400).json({ error: "No Such Product Found" });
+  }
+
+  product.productimages = productPic;
+
+  await product.save();
+
+  fs.unlink(path.resolve(imagePath), (err) => {
+    console.log("error in file delete:", err);
+  });
+
+  return res
+    .status(200)
+    .json({ message: "Product Image updated successfully" });
+}
+
 export {
     addProduct,
     viewProduct,
     bidProduct,
     deleteProduct,
     getProduct
+    // addProductImage
 }
