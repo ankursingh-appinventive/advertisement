@@ -1,17 +1,14 @@
 const express = require('express');
 import { sessionCheck } from "../middlewares/auth";
-import  { addProduct, viewProduct, bidProduct, deleteProduct, getProduct }  from "../controllers/productCont";
-
-
-
+import  { addProduct, viewOWNproduct, bidProduct, deleteProduct, getProduct,  uploadimage}  from "../controllers/productCont";
+import  middlewaremulter from "../middlewares/multer";
 const router = express.Router();
 
-// router.post("/add", sessionCheck, upload, addProduct);
 router.post("/add", sessionCheck, addProduct);
-
-router.get("/view",sessionCheck, viewProduct);
+router.get("/view",sessionCheck, viewOWNproduct);
 router.get("/get",sessionCheck, getProduct);
-router.put("/bid",sessionCheck, bidProduct);
-router.delete("/delete",sessionCheck, deleteProduct);
+router.post("/bid",sessionCheck, bidProduct);
+router.delete("/delete/:id",sessionCheck, deleteProduct);
+router.post("/profilePIC",sessionCheck, middlewaremulter.upload.any(), uploadimage);
 
 export default router;

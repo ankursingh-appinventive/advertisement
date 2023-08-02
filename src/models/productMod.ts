@@ -53,7 +53,7 @@ Product.init({
     status: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
-    },
+    }
 },
 {
     sequelize,
