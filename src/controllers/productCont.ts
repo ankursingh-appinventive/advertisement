@@ -149,11 +149,6 @@ export {
     viewOWNproduct,
     bidProduct,
     deleteProduct,
-<<<<<<< Updated upstream
-    getProduct
-    // addProductImage
-=======
     getProduct,
-    uploadimage
->>>>>>> Stashed changes
+    uploadimage,
 }
